@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class BootstrapRequest(BaseModel):
     bootstrap_secret: str = Field(min_length=1)
@@ -52,10 +52,13 @@ class PostCreateRequest(BaseModel):
                 raise ValueError("Scheduled time must be in the future")
         return value
 
-    @field_validator("status")
-    @classmethod
-    def scheduled_posts_need_time(cls, value, info):
-        return value
+    @model_validator(mode="after")
+    def validate_schedule(self):
+        if self.status == "scheduled" and self.scheduled_at is None:
+            raise ValueError("Scheduled posts need a scheduled_at value")
+        if self.status == "draft" and self.scheduled_at is not None:
+            raise ValueError("Draft posts cannot have a scheduled_at value")
+        return self
 
 class PostVariantResponse(BaseModel):
     id: str
