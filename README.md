@@ -2,40 +2,77 @@
 
 A single-church, multi-user social media management workspace for Love First Church.
 
-## Milestone 1 foundation
+## Current foundation
 
 - React + TypeScript + Vite dashboard
-- FastAPI backend with health and workspace endpoints
+- FastAPI backend with authenticated workspace API
+- PostgreSQL data models and Alembic migration
+- First-owner bootstrap, password hashing and JWT bearer authentication
+- Workspace, membership, social account, post, media, approval, publishing-job and audit-log tables
 - PostgreSQL and Redis development infrastructure
-- Responsive workspace navigation and platform status overview
-- Desktop wrapper preparation (Tauri)
 
 ## Run locally
 
-### Frontend
+### 1. Start infrastructure
+
+From the repository root:
+
+```powershell
+docker compose up -d
+```
+
+### 2. Configure the backend
+
+Copy `.env.example` to `.env` in the repository root. Set unique random values for `JWT_SECRET` and `BOOTSTRAP_SECRET`. Keep the real `.env` file private; it is ignored by Git.
+
+### 3. Run database migrations and the API
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+```
+
+Health endpoint: http://localhost:8000/health
+API documentation: http://localhost:8000/docs
+
+### 4. Create the first workspace owner
+
+The bootstrap endpoint is available only while the users table is empty and requires the server-side `BOOTSTRAP_SECRET`. Run this once from PowerShell, replacing the sample values:
+
+```powershell
+$body = @{
+  bootstrap_secret = "YOUR_BOOTSTRAP_SECRET"
+  email = "owner@example.com"
+  full_name = "Workspace Owner"
+  password = "Use-A-Unique-Password-At-Least-12-Chars"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/v1/auth/bootstrap" -ContentType "application/json" -Body $body
+```
+
+The response contains a short-lived bearer access token. Use it in the `Authorization: Bearer <token>` header for `/api/v1/auth/me` and `/api/v1/workspace`. Sign in later through `POST /api/v1/auth/login`.
+
+### 5. Run the frontend
+
+In a second terminal:
+
 ```powershell
 cd apps/web
 npm install
 npm run dev
 ```
 
-### Backend
-```powershell
-cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+## Security notes
 
-Health endpoint: http://localhost:8000/health
+- Never commit real `.env` files, passwords, JWT secrets or social-platform tokens.
+- Use long, unique secrets in production; production startup rejects weak JWT/bootstrap secrets.
+- The initial owner bootstrap endpoint becomes unavailable after the first user is created.
+- Social OAuth and publishing integrations are not connected yet. Platform credentials must be stored server-side using an encrypted secret store in a later milestone.
 
-### Infrastructure
-From the repository root:
-```powershell
-docker compose up -d
-```
+## Current limitations
 
-## Important
-
-This is the Milestone 1 application foundation. Social OAuth, automatic publishing, authentication, durable scheduling, and production deployment are subsequent milestones. Never expose platform access tokens in frontend code.
+The dashboard still contains demonstration content. Team invitations, role administration, post CRUD, media uploads, publishing workers, OAuth integrations, analytics and the native desktop wrapper are not implemented yet.
