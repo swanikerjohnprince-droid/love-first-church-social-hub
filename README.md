@@ -93,3 +93,7 @@ Configure these environment variables in your hosting provider:
 After the API is reachable, create the first owner once with `POST /api/v1/auth/bootstrap`, then remove or rotate the bootstrap secret. Do not expose the bootstrap secret in frontend configuration.
 
 For the frontend build, set `VITE_API_BASE_URL` to the API's HTTPS origin. This value is public and must never contain secrets. The GitHub Pages preview intentionally stays in demo mode until this value is configured and the API is deployed.
+
+### Connect the hosted frontend to the API
+
+In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables** and add a repository variable named `VITE_API_BASE_URL` containing only the public HTTPS API origin (for example, `https://api.your-domain.example`, with no trailing slash). This is a public frontend setting, not a secret. The Pages build workflow passes it to Vite. Also set the API's `FRONTEND_ORIGIN` to the exact GitHub Pages origin, such as `https://swanikerjohnprince-droid.github.io`.
