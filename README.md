@@ -97,3 +97,18 @@ For the frontend build, set `VITE_API_BASE_URL` to the API's HTTPS origin. This 
 ### Connect the hosted frontend to the API
 
 In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables** and add a repository variable named `VITE_API_BASE_URL` containing only the public HTTPS API origin (for example, `https://api.your-domain.example`, with no trailing slash). This is a public frontend setting, not a secret. The Pages build workflow passes it to Vite. Also set the API's `FRONTEND_ORIGIN` to the exact GitHub Pages origin, such as `https://swanikerjohnprince-droid.github.io`.
+
+## Media uploads and platform-specific drafts
+
+The Create Post composer supports multiple JPG, PNG, WebP, GIF, MP4 and MOV attachments (up to 100 MB per file), individual captions and platform settings for Facebook, Instagram, TikTok, YouTube, WhatsApp Channels and Telegram. Drafts and scheduled post metadata are stored through the authenticated API. Platform options are persisted as structured JSON so each platform adapter can validate and map supported settings when publishing integrations are added.
+
+The backend media API is:
+- `POST /api/v1/media` — authenticated multipart upload using the `file` field.
+- `GET /api/v1/media/{asset_id}/file` — authenticated media retrieval.
+- `POST /api/v1/posts` — saves platform variants, media asset references and platform-specific options.
+
+The upload implementation currently stores files under `MEDIA_ROOT` (default `./media`). This is suitable for local development only unless the deployment uses a persistent disk. For a production deployment, configure a persistent volume or replace the storage adapter with private S3-compatible object storage before relying on uploaded media. Do not assume container-local files survive redeploys.
+
+The migration `0002_post_media_options` adds per-platform option storage and the many-to-many post-media table. Existing deployments must run Alembic migrations before using the updated post API.
+
+**Publishing limitation:** saving a draft or scheduled record does not publish it to a social network. Official account authorization, platform-specific API permissions, media constraints, review/approval requirements and publishing workers still need to be implemented and tested for each provider. Some native-app features are not exposed to third-party APIs, so the composer must only enable actual publishing for options supported by the connected provider.
