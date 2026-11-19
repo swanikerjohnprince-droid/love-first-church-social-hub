@@ -3,6 +3,7 @@ databases:
     databaseName: lfc_social_hub
     user: lfc_social_hub
     plan: free
+    region: singapore
     postgresMajorVersion: "16"
 
 services:
@@ -10,6 +11,7 @@ services:
     name: lfc-social-hub-api
     runtime: docker
     plan: free
+    region: singapore
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /health
