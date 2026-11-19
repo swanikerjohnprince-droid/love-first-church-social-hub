@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
 from app.database import Base
@@ -62,6 +62,7 @@ class PostVariant(Base):
     platform: Mapped[str] = mapped_column(String(40))
     caption: Mapped[str] = mapped_column(Text, default="")
     media_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("media_assets.id", ondelete="SET NULL"), nullable=True)
+    platform_options: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
 class MediaAsset(Base):
     __tablename__ = "media_assets"
@@ -73,6 +74,13 @@ class MediaAsset(Base):
     size_bytes: Mapped[int] = mapped_column(Integer)
     uploaded_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+class PostMedia(Base):
+    __tablename__ = "post_media"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=new_id)
+    post_variant_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("post_variants.id", ondelete="CASCADE"), index=True)
+    media_asset_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("media_assets.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=0)
 
 class PublishingJob(Base):
     __tablename__ = "publishing_jobs"
