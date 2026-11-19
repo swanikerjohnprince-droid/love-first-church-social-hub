@@ -78,6 +78,8 @@ async def connect_telegram(
     if not bot.get("is_bot"):
         raise HTTPException(status_code=422, detail="The supplied Telegram account is not a bot.")
     chat = await _telegram_call(payload.bot_token.strip(), "getChat", {"chat_id": payload.channel_id.strip()})
+    if chat.get("type") != "channel":
+        raise HTTPException(status_code=422, detail="The supplied destination is not a Telegram channel.")
     member = await _telegram_call(
         payload.bot_token.strip(),
         "getChatMember",
