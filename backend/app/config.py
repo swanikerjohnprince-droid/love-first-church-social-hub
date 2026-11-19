@@ -1,3 +1,4 @@
+from cryptography.fernet import Fernet
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,6 +21,12 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET must be a unique random value of at least 32 characters in production")
             if len(self.bootstrap_secret) < 24:
                 raise ValueError("BOOTSTRAP_SECRET must be at least 24 characters in production")
+            if not self.credentials_encryption_key:
+                raise ValueError("CREDENTIALS_ENCRYPTION_KEY is required in production")
+            try:
+                Fernet(self.credentials_encryption_key.encode("utf-8"))
+            except Exception as exc:
+                raise ValueError("CREDENTIALS_ENCRYPTION_KEY must be a valid Fernet key") from exc
         return self
 
 settings = Settings()
