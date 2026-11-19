@@ -32,5 +32,4 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m compileall app alembic
-      - run: python -c "from app.main import app; print(app.title)" alembic
       - run: python -c "from app.main import app; print(app.title)"
