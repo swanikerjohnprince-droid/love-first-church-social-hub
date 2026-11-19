@@ -6,6 +6,7 @@ from app.auth import get_current_user, router as auth_router
 from app.config import settings
 from app.database import get_db
 from app.models import Membership, SocialAccount, User, Workspace
+from app.posts import router as posts_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -21,6 +22,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(auth_router)
+app.include_router(posts_router)
 
 @app.get("/health", tags=["system"])
 async def health():
