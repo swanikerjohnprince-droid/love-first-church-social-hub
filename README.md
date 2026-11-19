@@ -76,3 +76,20 @@ npm run dev
 ## Current limitations
 
 The dashboard still contains demonstration content. Team invitations, role administration, post CRUD, media uploads, publishing workers, OAuth integrations, analytics and the native desktop wrapper are not implemented yet.
+
+## Deploy the API
+
+The backend includes a production container definition at `backend/Dockerfile`. It installs the pinned-range Python dependencies, applies Alembic migrations at container startup, and serves FastAPI on the platform-provided `PORT`.
+
+Configure these environment variables in your hosting provider:
+
+- `ENVIRONMENT=production`
+- `DATABASE_URL` — PostgreSQL connection string using the `postgresql+psycopg://` SQLAlchemy driver
+- `JWT_SECRET` — unique random value of at least 32 characters
+- `BOOTSTRAP_SECRET` — separate one-time setup secret of at least 24 characters
+- `FRONTEND_ORIGIN` — exact HTTPS origin of the deployed frontend
+- `PORT` — supplied by most container hosting platforms
+
+After the API is reachable, create the first owner once with `POST /api/v1/auth/bootstrap`, then remove or rotate the bootstrap secret. Do not expose the bootstrap secret in frontend configuration.
+
+For the frontend build, set `VITE_API_BASE_URL` to the API's HTTPS origin. This value is public and must never contain secrets. The GitHub Pages preview intentionally stays in demo mode until this value is configured and the API is deployed.
