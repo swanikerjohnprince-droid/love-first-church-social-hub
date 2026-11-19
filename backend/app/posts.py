@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import AuditLog, Membership, Post, PostVariant, User
+from app.models import AuditLog, MediaAsset, Membership, Post, PostMedia, PostVariant, User
 from app.schemas import PostCreateRequest, PostResponse, PostVariantResponse
 
 router = APIRouter(prefix="/api/v1/posts", tags=["posts"])
@@ -22,7 +22,7 @@ def _serialize(post: Post, variants: list[PostVariant]) -> PostResponse:
         status=post.status,
         scheduled_at=post.scheduled_at,
         created_at=post.created_at,
-        variants=[PostVariantResponse(id=str(v.id), platform=v.platform, caption=v.caption) for v in variants],
+        variants=[PostVariantResponse(id=str(v.id), platform=v.platform, caption=v.caption, media_asset_ids=getattr(v, "_media_asset_ids", []), options=v.platform_options or {}) for v in variants],
     )
 
 @router.get("", response_model=list[PostResponse])
@@ -40,7 +40,7 @@ def list_posts(
     result = []
     for post in posts:
         variants = db.scalars(select(PostVariant).where(PostVariant.post_id == post.id)).all()
-        result.append(_serialize(post, variants))
+        for variant in variants:\n            variant._media_asset_ids = [str(x.media_asset_id) for x in db.scalars(select(PostMedia).where(PostMedia.post_variant_id == variant.id).order_by(PostMedia.position)).all()]\n        result.append(_serialize(post, variants))
     return result
 
 @router.post("", response_model=PostResponse, status_code=201)
@@ -82,4 +82,4 @@ def create_post(
     db.refresh(post)
     for variant in variants:
         db.refresh(variant)
-    return _serialize(post, variants)
+    for variant in variants:\n        variant._media_asset_ids = [str(x.media_asset_id) for x in db.scalars(select(PostMedia).where(PostMedia.post_variant_id == variant.id).order_by(PostMedia.position)).all()]\n    return _serialize(post, variants)
