@@ -30,3 +30,17 @@ services:
         sync: false
       - key: FRONTEND_ORIGIN
         value: https://swanikerjohnprince-droid.github.io
+      - key: API_PUBLIC_URL
+        value: https://lfc-social-hub-api.onrender.com
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: TIKTOK_CLIENT_KEY
+        sync: false
+      - key: TIKTOK_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
