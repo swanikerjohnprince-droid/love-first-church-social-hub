@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models import Membership, SocialAccount, User, Workspace
 from app.posts import router as posts_router
 from app.media import router as media_router
+from app.integrations import router as integrations_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(posts_router)
 app.include_router(media_router)
+app.include_router(integrations_router)
 
 @app.get("/health", tags=["system"])
 async def health():
