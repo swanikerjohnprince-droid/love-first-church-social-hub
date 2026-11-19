@@ -1,0 +1,30 @@
+databases:
+  - name: lfc-social-hub-db
+    databaseName: lfc_social_hub
+    user: lfc_social_hub
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: lfc-social-hub-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lfc-social-hub-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_SECRET
+        sync: false
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://swanikerjohnprince-droid.github.io
