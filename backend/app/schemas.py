@@ -35,6 +35,8 @@ from typing import Literal
 class PostVariantInput(BaseModel):
     platform: Literal["facebook", "instagram", "tiktok", "youtube", "whatsapp_channels", "telegram"]
     caption: str = Field(default="", max_length=10000)
+    media_asset_ids: list[str] = Field(default_factory=list, max_length=10)
+    options: dict = Field(default_factory=dict)
 
 class PostCreateRequest(BaseModel):
     status: Literal["draft", "scheduled"] = "draft"
@@ -64,6 +66,8 @@ class PostVariantResponse(BaseModel):
     id: str
     platform: str
     caption: str
+    media_asset_ids: list[str] = Field(default_factory=list)
+    options: dict = Field(default_factory=dict)
 
 class PostResponse(BaseModel):
     id: str
