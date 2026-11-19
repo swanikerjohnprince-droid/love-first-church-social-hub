@@ -71,11 +71,11 @@ npm run dev
 - Never commit real `.env` files, passwords, JWT secrets or social-platform tokens.
 - Use long, unique secrets in production; production startup rejects weak JWT/bootstrap secrets.
 - The initial owner bootstrap endpoint becomes unavailable after the first user is created.
-- Social OAuth and publishing integrations are not connected yet. Platform credentials must be stored server-side using an encrypted secret store in a later milestone.
+- The Telegram connection uses the official Bot API. Bot tokens are encrypted at rest with Fernet using CREDENTIALS_ENCRYPTION_KEY; never put that key in frontend variables or commit it. Other platform OAuth integrations are still being built.
 
 ## Current limitations
 
-The dashboard still contains demonstration content. Team invitations, role administration, post CRUD, media uploads, publishing workers, OAuth integrations, analytics and the native desktop wrapper are not implemented yet.
+The dashboard still contains demonstration content. Team invitations, role administration, a full publishing worker, Meta/Google/TikTok OAuth integrations, analytics and the native desktop wrapper are not implemented yet.
 
 ## Deploy the API
 
@@ -87,6 +87,7 @@ Configure these environment variables in your hosting provider:
 - `DATABASE_URL` — PostgreSQL connection string using the `postgresql+psycopg://` SQLAlchemy driver
 - `JWT_SECRET` — unique random value of at least 32 characters
 - `BOOTSTRAP_SECRET` — separate one-time setup secret of at least 24 characters
+- `CREDENTIALS_ENCRYPTION_KEY` — private Fernet key for encrypting social-account credentials at rest. Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Keep it stable and back it up securely; losing it makes stored tokens unreadable.
 - `FRONTEND_ORIGIN` — exact HTTPS origin of the deployed frontend
 - `PORT` — supplied by most container hosting platforms
 
@@ -112,3 +113,22 @@ The upload implementation currently stores files under `MEDIA_ROOT` (default `./
 The migration `0002_post_media_options` adds per-platform option storage and the many-to-many post-media table. Existing deployments must run Alembic migrations before using the updated post API.
 
 **Publishing limitation:** saving a draft or scheduled record does not publish it to a social network. Official account authorization, platform-specific API permissions, media constraints, review/approval requirements and publishing workers still need to be implemented and tested for each provider. Some native-app features are not exposed to third-party APIs, so the composer must only enable actual publishing for options supported by the connected provider.
+
+## Telegram channel connection
+
+The Settings page includes a Telegram connection flow using the official Telegram Bot API. Create a bot, add it as an administrator to the target channel with permission to post messages, then enter its token and the channel username/ID in the authenticated Settings page. The backend validates the bot and channel permissions before saving the connection. The bot token is encrypted with Fernet and is never returned to the frontend.
+
+Required backend environment variable: `CREDENTIALS_ENCRYPTION_KEY`. Generate a Fernet key with:
+
+```powershell
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Set this as a backend-only environment variable. Do not set it as a Vite variable, paste it into chat, or commit it. Keep a secure backup because rotating or losing the key without re-encrypting existing credentials will make stored connections unreadable.
+
+Telegram connection endpoints:
+- `GET /api/v1/integrations` — returns connection status without secrets.
+- `POST /api/v1/integrations/telegram/connect` — validates and stores a bot/channel connection.
+- `DELETE /api/v1/integrations/telegram` — removes the stored token and disconnects the channel.
+
+The Telegram connection is the first provider integration. Direct publishing, scheduled delivery and retry handling are separate follow-up work; a connected bot does not mean queued posts are automatically published yet.
