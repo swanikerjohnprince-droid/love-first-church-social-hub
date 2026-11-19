@@ -131,7 +131,7 @@ export default function PostComposer({onDone}:{onDone:()=>void}) {
       })})
       const body=await response.json()
       if(!response.ok)throw new Error(body.detail||'Could not save this post.')
-      setSaved(true);setMessage(schedule?'Your post has been added to the scheduled queue.':'Your post has been saved as a draft.')
+      setSaved(true);setMessage(schedule?'Your post and scheduled time have been saved. Automatic publishing is not active yet.':'Your post has been saved as a draft.')
     }catch(err){setMessage(err instanceof Error?err.message:'Something went wrong.')}
     finally{setBusy(false)}
   }
@@ -158,7 +158,7 @@ export default function PostComposer({onDone}:{onDone:()=>void}) {
         {active==='youtube'&&<p className="api-note">YouTube-specific metadata is stored with this draft. Thumbnail upload and playlist selection will be completed when YouTube account publishing is connected.</p>}
       </div>:<p className="api-note">Choose one or more platforms to configure their individual post settings.</p>}
     </div>
-    <div className="schedule-box"><label className="option-check"><input type="checkbox" checked={schedule} onChange={e=>setSchedule(e.target.checked)}/><Clock3 size={15}/> Schedule this post</label>{schedule&&<label className="schedule-date">Date and time<input type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/><small>Uses your workspace timezone (Africa/Accra).</small></label>}</div>
+    <div className="schedule-box"><label className="option-check"><input type="checkbox" checked={schedule} onChange={e=>setSchedule(e.target.checked)}/><Clock3 size={15}/> Schedule this post</label>{schedule&&<label className="schedule-date">Date and time<input type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)}/><small>Uses your workspace timezone (Africa/Accra). This saves the schedule only; automatic publishing will be enabled after the channel integrations are connected.</small></label>}</div>
     {message&&<div className={saved?'composer-success':'composer-error'} role="status">{message}</div>}
     <div className="composer-actions"><button type="button" className="cancel" onClick={onDone}>Back to queue</button>{saved?<button type="button" className="save-draft" onClick={onDone}>View publishing queue</button>:<button className="save-draft" disabled={busy||uploading||(!caption.trim()&&!media.length)}>{busy?'Saving…':schedule?'Save scheduled post':'Save draft'}</button>}</div>
     <p className="api-note footer-note"><ImagePlus size={13}/> Media is uploaded to the configured backend. Direct publishing is not active until each social account's official API connection is configured.</p>
