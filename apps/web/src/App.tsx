@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Activity, Bell, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, FileImage, Home, Instagram, LayoutDashboard, ListChecks, Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Users, Youtube, Facebook, Music2, Megaphone, ChartNoAxesCombined } from 'lucide-react'
 
+import PostComposer from './PostComposer'
 type Page = 'Overview' | 'Calendar' | 'Create post' | 'Publishing queue' | 'Approvals' | 'Media library' | 'Campaigns' | 'Analytics' | 'Team' | 'Settings'
 const nav: { label: Page; icon: typeof Home; group: string }[] = [
   { label: 'Overview', icon: Home, group: 'WORKSPACE' },
@@ -83,7 +84,7 @@ export default function App() {
           </div>
           <div className="columns lower"><section className="panel"><div className="panel-head"><div><h2>Coming up next</h2><p>Keep an eye on what's going out</p></div><button className="link" onClick={()=>setPage('Publishing queue')}>View queue ↗</button></div>{upcoming.map(p=><div className="post" key={p.title}><div className="date"><b>{p.date}</b><small>{p.month}</small></div><div className="post-info"><b>{p.title}</b><small>{p.channels}</small><small className="time"><Clock3 size={12}/> {p.time}</small></div><span className={'status '+p.tone}>{p.status}</span></div>)}</section><section className="panel activity"><div className="panel-head"><div><h2>Team activity</h2><p>Recent workspace updates</p></div><MoreHorizontal size={17}/></div><div className="empty"><div><Activity size={22}/></div><b>Your team's activity will appear here</b><p>When your team creates, reviews or publishes content, you'll see it here.</p></div></section></div>
           <div className="footnote"><Sparkles size={14}/> Your workspace is ready. Connect a social account to begin.</div>
-        </>:<section className="panel coming"><div className="coming-icon"><LayoutDashboard size={26}/></div><h2>{page} is in the next build milestone</h2><p>The application shell and navigation are working. This module will be implemented with its real data and workflows in the upcoming milestones.</p><button onClick={()=>setPage('Overview')}>Back to overview</button></section>}
+        </>:page==='Create post'?<PostComposer onDone={()=>setPage('Publishing queue')}/>:<section className="panel coming"><div className="coming-icon"><LayoutDashboard size={26}/></div><h2>{page} is in the next build milestone</h2><p>The application shell and navigation are working. This module will be implemented with its real data and workflows in the upcoming milestones.</p><button onClick={()=>setPage('Overview')}>Back to overview</button></section>}
       </div>
     </main>
     {toast&&<div className="toast"><Check size={16}/>{toast}</div>}
