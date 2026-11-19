@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 30
     bootstrap_secret: str = ""
+    credentials_encryption_key: str = ""
     model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
 
     @model_validator(mode="after")
