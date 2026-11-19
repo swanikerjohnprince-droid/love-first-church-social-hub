@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity, Bell, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Clock3, FileImage, Home, Instagram, LayoutDashboard, ListChecks, Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Users, Youtube, Facebook, Music2, Megaphone, ChartNoAxesCombined } from 'lucide-react'
 
 type Page = 'Overview' | 'Calendar' | 'Create post' | 'Publishing queue' | 'Approvals' | 'Media library' | 'Campaigns' | 'Analytics' | 'Team' | 'Settings'
@@ -39,7 +39,18 @@ const descriptions: Record<Page,string> = {
   'Team': 'Manage the people who help run your church channels.',
   'Settings': 'Configure your workspace, accounts and preferences.',
 }
+type WorkspaceData = { name:string; timezone:string; platforms:{key:string;name:string;connection:string}[] }
 export default function App() {
+  const [workspace,setWorkspace] = useState<WorkspaceData|null>(null)
+  useEffect(()=>{
+    const token=sessionStorage.getItem('lfc_access_token')
+    const api=(import.meta.env.VITE_API_BASE_URL as string|undefined)?.replace(/\/$/,'')
+    if(!token || !api) return
+    fetch(api+'/api/v1/workspace',{headers:{Authorization:'Bearer '+token}})
+      .then(async response=>{if(!response.ok) throw new Error('Workspace request failed');return response.json()})
+      .then(data=>setWorkspace(data))
+      .catch(()=>{})
+  },[])
   const [page,setPage] = useState<Page>('Overview')
   const [menu,setMenu] = useState(false)
   const [toast,setToast] = useState('')
@@ -50,7 +61,7 @@ export default function App() {
     {menu && <button className="scrim" onClick={()=>setMenu(false)} aria-label="Close menu" />}
     <aside className={menu?'sidebar open':'sidebar'}>
       <div className="brand"><div className="brand-icon"><Sparkles size={19}/></div><div><b>LFC Social Hub</b><small>LOVE FIRST CHURCH</small></div></div>
-      <button className="workspace"><div className="church-mark">LF</div><div><b>Love First Church</b><small>Church workspace</small></div><ChevronDown size={15}/></button>
+      <button className="workspace"><div className="church-mark">LF</div><div><b>{workspace?.name || 'Love First Church'}</b><small>Church workspace</small></div><ChevronDown size={15}/></button>
       <div className="search"><Search size={15}/><input placeholder="Find a page..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
       <nav>{['WORKSPACE','PUBLISH','CONTENT','INSIGHTS','ADMINISTRATION'].map(group=><section key={group}><label>{group}</label>{filtered.filter(n=>n.group===group).map(n=>{const I=n.icon;return <button key={n.label} className={page===n.label?'nav active':'nav'} onClick={()=>{setPage(n.label);setMenu(false)}}><I size={17}/>{n.label}{n.label==='Approvals'&&<i>2</i>}</button>})}</section>)}</nav>
       <div className="side-bottom"><div className="help"><CircleHelp size={17}/><div><b>Need a hand?</b><small>Help centre</small></div></div><div className="user"><div className="avatar">LF</div><div><b>Workspace owner</b><small>Administrator</small></div><MoreHorizontal size={18}/></div></div>
@@ -64,11 +75,11 @@ export default function App() {
             <Stat title="Scheduled posts" value="08" note="Across your channels" icon={CalendarDays} color="purple"/>
             <Stat title="Awaiting approval" value="02" note="Needs your attention" icon={ShieldCheck} color="amber"/>
             <Stat title="Published this month" value="24" note="Since November 1" icon={Send} color="green"/>
-            <Stat title="Connected accounts" value="0 / 6" note="Connect your channels" icon={Activity} color="blue"/>
+            <Stat title="Connected accounts" value={workspace ? `${workspace.platforms.filter(p=>p.connection==="connected").length} / 6` : "0 / 6"} note={workspace ? "Live workspace connections" : "Connect your channels"} icon={Activity} color="blue"/>
           </div>
           <div className="columns">
             <section className="panel calendar"><div className="panel-head"><div><h2>Content calendar</h2><p>Your publishing schedule at a glance</p></div><button className="link" onClick={()=>setPage('Calendar')}>Full calendar ↗</button></div><div className="month">November 2026 <span>‹　Today　›</span></div><div className="days">{['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d=><b key={d}>{d}</b>)}{Array.from({length:35},(_,i)=>{const d=i-5;const n=d<=0?31+d:d>30?d-30:d;return <button key={i} className={(d===19?'today ':'')+([19,20,21,23,25,28].includes(d)?'marked':'')}>{n}</button>})}</div><div className="legend"><span><i/> Scheduled</span><span><i/> Needs approval</span><span><i/> Draft</span></div></section>
-            <section className="panel accounts"><div className="panel-head"><div><h2>Social accounts</h2><p>Your publishing destinations</p></div><button className="dots"><Settings size={16}/></button></div>{channels.map(c=>{const I=c.icon;return <div className="channel" key={c.name}><div className="channel-icon" style={{color:c.color}}><I size={18}/></div><div className="channel-name"><b>{c.name}</b><small>{c.sub}</small></div><button onClick={()=>notify(c.name+' integration will be configured in the integrations milestone.')}>{c.mode} ↗</button></div>})}<button className="manage" onClick={()=>setPage('Settings')}>Manage integrations ↗</button></section>
+            <section className="panel accounts"><div className="panel-head"><div><h2>Social accounts</h2><p>Your publishing destinations</p></div><button className="dots"><Settings size={16}/></button></div>{channels.map(c=>{const I=c.icon;const state=workspace?.platforms.find(p=>p.name===c.name)?.connection;return <div className="channel" key={c.name}><div className="channel-icon" style={{color:c.color}}><I size={18}/></div><div className="channel-name"><b>{c.name}</b><small>{state==='connected'?'Connected':state==='manual_setup'?'Assisted setup':c.sub}</small></div><button onClick={()=>notify(state==='connected'?c.name+' is connected.':c.name+' integration will be configured in the integrations milestone.')}>{state==='connected'?'Connected':c.mode} ↗</button></div>})}<button className="manage" onClick={()=>setPage('Settings')}>Manage integrations ↗</button></section>
           </div>
           <div className="columns lower"><section className="panel"><div className="panel-head"><div><h2>Coming up next</h2><p>Keep an eye on what's going out</p></div><button className="link" onClick={()=>setPage('Publishing queue')}>View queue ↗</button></div>{upcoming.map(p=><div className="post" key={p.title}><div className="date"><b>{p.date}</b><small>{p.month}</small></div><div className="post-info"><b>{p.title}</b><small>{p.channels}</small><small className="time"><Clock3 size={12}/> {p.time}</small></div><span className={'status '+p.tone}>{p.status}</span></div>)}</section><section className="panel activity"><div className="panel-head"><div><h2>Team activity</h2><p>Recent workspace updates</p></div><MoreHorizontal size={17}/></div><div className="empty"><div><Activity size={22}/></div><b>Your team's activity will appear here</b><p>When your team creates, reviews or publishes content, you'll see it here.</p></div></section></div>
           <div className="footnote"><Sparkles size={14}/> Your workspace is ready. Connect a social account to begin.</div>
