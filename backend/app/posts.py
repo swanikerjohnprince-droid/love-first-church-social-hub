@@ -16,13 +16,20 @@ def _workspace_id(db: Session, user: User):
         raise HTTPException(status_code=403, detail="No workspace membership")
     return membership.workspace_id
 
-def _serialize(post: Post, variants: list[PostVariant]) -> PostResponse:
+def _serialize(post: Post, variants: list[PostVariant], db: Session) -> PostResponse:
+    output = []
+    for variant in variants:
+        links = db.scalars(
+            select(PostMedia).where(PostMedia.post_variant_id == variant.id).order_by(PostMedia.position)
+        ).all()
+        output.append(PostVariantResponse(
+            id=str(variant.id), platform=variant.platform, caption=variant.caption,
+            media_asset_ids=[str(link.media_asset_id) for link in links],
+            options=variant.platform_options or {},
+        ))
     return PostResponse(
-        id=str(post.id),
-        status=post.status,
-        scheduled_at=post.scheduled_at,
-        created_at=post.created_at,
-        variants=[PostVariantResponse(id=str(v.id), platform=v.platform, caption=v.caption, media_asset_ids=getattr(v, "_media_asset_ids", []), options=v.platform_options or {}) for v in variants],
+        id=str(post.id), status=post.status, scheduled_at=post.scheduled_at,
+        created_at=post.created_at, variants=output,
     )
 
 @router.get("", response_model=list[PostResponse])
@@ -37,11 +44,10 @@ def list_posts(
         select(Post).where(Post.workspace_id == workspace_id)
         .order_by(Post.created_at.desc()).limit(limit).offset(offset)
     ).all()
-    result = []
-    for post in posts:
-        variants = db.scalars(select(PostVariant).where(PostVariant.post_id == post.id)).all()
-        for variant in variants:\n            variant._media_asset_ids = [str(x.media_asset_id) for x in db.scalars(select(PostMedia).where(PostMedia.post_variant_id == variant.id).order_by(PostMedia.position)).all()]\n        result.append(_serialize(post, variants))
-    return result
+    return [
+        _serialize(post, db.scalars(select(PostVariant).where(PostVariant.post_id == post.id)).all(), db)
+        for post in posts
+    ]
 
 @router.post("", response_model=PostResponse, status_code=201)
 def create_post(
@@ -50,36 +56,45 @@ def create_post(
     db: Session = Depends(get_db),
 ):
     workspace_id = _workspace_id(db, user)
-    if payload.status == "scheduled" and payload.scheduled_at is None:
-        raise HTTPException(status_code=422, detail="Scheduled posts need a scheduled_at value")
-    if payload.status == "draft" and payload.scheduled_at is not None:
-        raise HTTPException(status_code=422, detail="Draft posts cannot have a scheduled_at value")
     platforms = [variant.platform for variant in payload.variants]
     if len(platforms) != len(set(platforms)):
         raise HTTPException(status_code=422, detail="Each platform can only appear once per post")
     post = Post(
-        workspace_id=workspace_id,
-        created_by=user.id,
-        status=payload.status,
-        scheduled_at=payload.scheduled_at,
+        workspace_id=workspace_id, created_by=user.id,
+        status=payload.status, scheduled_at=payload.scheduled_at,
     )
     db.add(post)
     db.flush()
-    variants = [
-        PostVariant(post_id=post.id, platform=item.platform, caption=item.caption)
-        for item in payload.variants
-    ]
-    db.add_all(variants)
+    variants = []
+    for item in payload.variants:
+        try:
+            asset_ids = [uuid.UUID(value) for value in item.media_asset_ids]
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid media asset ID")
+        if len(asset_ids) != len(set(asset_ids)):
+            raise HTTPException(status_code=422, detail="Duplicate media attachments are not allowed")
+        if asset_ids:
+            assets = db.scalars(select(MediaAsset).where(
+                MediaAsset.workspace_id == workspace_id, MediaAsset.id.in_(asset_ids)
+            )).all()
+            if len(assets) != len(asset_ids):
+                raise HTTPException(status_code=404, detail="One or more media files were not found in this workspace")
+        variant = PostVariant(
+            post_id=post.id, platform=item.platform, caption=item.caption,
+            platform_options=item.options,
+        )
+        db.add(variant)
+        db.flush()
+        variants.append(variant)
+        for position, asset_id in enumerate(asset_ids):
+            db.add(PostMedia(post_variant_id=variant.id, media_asset_id=asset_id, position=position))
     db.add(AuditLog(
-        workspace_id=workspace_id,
-        actor_user_id=user.id,
-        action="post.created",
-        target_type="post",
-        target_id=str(post.id),
+        workspace_id=workspace_id, actor_user_id=user.id,
+        action="post.created", target_type="post", target_id=str(post.id),
         details=json.dumps({"status": post.status, "platforms": platforms}),
     ))
     db.commit()
     db.refresh(post)
     for variant in variants:
         db.refresh(variant)
-    for variant in variants:\n        variant._media_asset_ids = [str(x.media_asset_id) for x in db.scalars(select(PostMedia).where(PostMedia.post_variant_id == variant.id).order_by(PostMedia.position)).all()]\n    return _serialize(post, variants)
+    return _serialize(post, variants, db)
